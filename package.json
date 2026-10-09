@@ -1,6 +1,6 @@
 {
   "name": "fund.mithril.lib.graph-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Mithril graph presentation: semantic overview, focus orbits, workflow lanes and recorded-step history.",
   "type": "module",
   "license": "Apache-2.0",

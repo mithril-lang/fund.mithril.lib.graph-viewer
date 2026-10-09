@@ -1,12 +1,12 @@
 /* Deterministic presentation layouts. They change neither RDF nor computation. */
 'use strict';
 const groups=[
- {id:'business',label:'業務・プロセス',color:'#368f83',fill:'#edf8f4'},
- {id:'product',label:'製品・サービス',color:'#397fe0',fill:'#edf4ff'},
- {id:'organization',label:'組織・ガバナンス',color:'#aa7b3f',fill:'#fbf5ea'},
- {id:'code',label:'コード・実装',color:'#7863bb',fill:'#f3effc'},
- {id:'ontology',label:'オントロジー',color:'#9c69bb',fill:'#f8f0fb'},
- {id:'evidence',label:'来歴・外部参照',color:'#65909f',fill:'#eff6f8'}];
+ {id:'business',label:'Business & processes',color:'#368f83',fill:'#edf8f4'},
+ {id:'product',label:'Products & services',color:'#397fe0',fill:'#edf4ff'},
+ {id:'organization',label:'Organization & governance',color:'#aa7b3f',fill:'#fbf5ea'},
+ {id:'code',label:'Code & implementation',color:'#7863bb',fill:'#f3effc'},
+ {id:'ontology',label:'Ontology',color:'#9c69bb',fill:'#f8f0fb'},
+ {id:'evidence',label:'Evidence & references',color:'#65909f',fill:'#eff6f8'}];
 const local=x=>String(x||'').split(/[#/:]/).pop();
 function groupFor(n){const types=(n.types||[]).map(local).join(' '),label=n.label||'';
  if(n.external)return 'evidence';
@@ -19,7 +19,7 @@ function groupFor(n){const types=(n.types||[]).map(local).join(' '),label=n.labe
  return 'ontology';
 }
 function degrees(edges){const d=new Map();for(const e of edges){d.set(e.source,(d.get(e.source)||0)+1);d.set(e.target,(d.get(e.target)||0)+1);}return d;}
-function rank(nodes,edges,priority=[]){const d=degrees(edges),preferred=new Set(priority);const relevance=n=>/^(CEO|CFO|COO|CTO|IT Admin)$/.test(n.label||'')||/契約|承認|マーケティング/.test(n.label||'')?15:/^(mithril|mithril-agent|mithril-fund|mithril-desktop|ontology|Mithril \(mithril.fund\))$/.test(n.label||'')?15:/(?:-test|_test|\.test|\/test)/.test(n.label||'')?-15:0;return nodes.slice().sort((a,b)=>(+preferred.has(b.id)-+preferred.has(a.id))||(+a.id.startsWith('_:')-+b.id.startsWith('_:'))||(+!a.label-+!b.label)||(relevance(b)-relevance(a))||((d.get(b.id)||0)-(d.get(a.id)||0))||a.id.localeCompare(b.id));}
+function rank(nodes,edges,priority=[]){const d=degrees(edges),preferred=new Set(priority);const relevance=n=>/^(CEO|CFO|COO|CTO|IT Admin)$/.test(n.label||'')||/contract|approv|marketing|契約|承認|マーケティング/i.test(n.label||'')?15:/^(mithril|mithril-agent|mithril-fund|mithril-desktop|ontology|Mithril \(mithril.fund\))$/.test(n.label||'')?15:/(?:-test|_test|\.test|\/test)/.test(n.label||'')?-15:0;return nodes.slice().sort((a,b)=>(+preferred.has(b.id)-+preferred.has(a.id))||(+a.id.startsWith('_:')-+b.id.startsWith('_:'))||(+!a.label-+!b.label)||(relevance(b)-relevance(a))||((d.get(b.id)||0)-(d.get(a.id)||0))||a.id.localeCompare(b.id));}
 function community(nodes,edges,{group='',priority=[]}={}){
  const ids=new Set(nodes.map(n=>n.id)),visibleEdges=edges.filter(e=>ids.has(e.source)&&ids.has(e.target)),buckets=new Map(groups.map(g=>[g.id,[]]));for(const n of nodes)buckets.get(groupFor(n)).push(n);
  const present=groups.filter(g=>buckets.get(g.id).length&&(!group||g.id===group));const points=[],regions=[];
@@ -47,7 +47,7 @@ function flow(program){
  const owner=new Map();components.forEach((c,i)=>c.forEach(id=>owner.set(id,i)));const incoming=new Map(components.map((_,i)=>[i,new Set()])),outgoing=new Map(components.map((_,i)=>[i,new Set()]));for(const e of edges){const a=owner.get(e.from),b=owner.get(e.to);if(a!==undefined&&b!==undefined&&a!==b){incoming.get(b).add(a);outgoing.get(a).add(b);}}
  const layer=new Map(components.map((_,i)=>[i,0])),pending=new Map([...incoming].map(([id,ns])=>[id,ns.size])),queue=[...pending].filter(([,v])=>!v).map(([id])=>id);
  for(let cursor=0;cursor<queue.length;cursor++){const a=queue[cursor];for(const b of outgoing.get(a)){layer.set(b,Math.max(layer.get(b),layer.get(a)+1));pending.set(b,pending.get(b)-1);if(!pending.get(b))queue.push(b);}}
- const lanes=['グラフを読む','状態を更新','制御・確認'],lane=n=>['neighbors','traverse','propagate'].includes(n.op)?0:['set','increment','append'].includes(n.op)?1:2,slots=new Map();
+ const lanes=['Read graph','Update state','Control & review'],lane=n=>['neighbors','traverse','propagate'].includes(n.op)?0:['set','increment','append'].includes(n.op)?1:2,slots=new Map();
  const laid=nodes.slice().sort((a,b)=>a.id.localeCompare(b.id)).map(n=>{const column=layer.get(owner.get(n.id)),row=lane(n),key=column+'|'+row,slot=slots.get(key)||0;slots.set(key,slot+1);return {...n,column,lane:row,slot,cycle:components[owner.get(n.id)].length>1||adj.get(n.id).includes(n.id)};});
  const laneHeights=lanes.map((_,i)=>Math.max(1,...[...slots].filter(([k])=>+k.split('|')[1]===i).map(([,v])=>v))*92+30),laneYs=[];let y=76;laneHeights.forEach(h=>{laneYs.push(y);y+=h;});
  for(const n of laid){n.x=200+n.column*230;n.y=laneYs[n.lane]+28+n.slot*92;}

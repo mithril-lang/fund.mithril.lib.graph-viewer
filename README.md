@@ -10,7 +10,7 @@ package dependencies. Apache-2.0.
 Versioned distribution is on GitHub Releases (not the npm registry):
 
 ```sh
-npm install https://github.com/mithril-lang/fund.mithril.lib.graph-viewer/releases/download/v0.1.0/fund.mithril.lib.graph-viewer-0.1.0.tgz
+npm install https://github.com/mithril-lang/fund.mithril.lib.graph-viewer/releases/download/v0.1.1/fund.mithril.lib.graph-viewer-0.1.1.tgz
 ```
 
 For a browser without a bundler, serve the released `src/` directory and import
@@ -41,14 +41,25 @@ viewer.setLayout('community');
 The shared design-system stylesheet is supplied by the host and is not copied
 into this library. `viewer.css` consumes its tokens with standalone fallbacks.
 
+## Language policy
+
+English is the default for UI, accessible names, empty states, group and lane
+labels, counts, documentation, and examples. Browser/document language does not
+silently select a translation. Opt in with `locale: 'ja'` or `viewer.setLocale('ja')`.
+Input node labels and properties retain their original language. Changing locale
+preserves selection, route, computation and inspected step.
+
+This follows the [Mithril organization language policy](https://github.com/mithril-lang/.github/blob/main/LANGUAGE_POLICY.md).
+
 ## API
 
-`mount(container, { model, layout?, selected?, computation?, onSelect?, onStep? })`
+`mount(container, { model, layout?, locale?, selected?, computation?, onSelect?, onStep? })`
 returns:
 
 | Method | Behavior |
 | --- | --- |
 | `select(id)` | Center an existing node and emit `onSelect`; keyboard Enter/Space also works |
+| `setLocale(locale)` | Explicit `en` or `ja`; default is always `en` |
 | `setLayout(name)` | `community`, `orbit`, `flow`, or `river` |
 | `setModel(model)` | Replace the inert graph and clear stale selection/route |
 | `setPredicate(iri)` | Filter orbit relations; empty string restores all |

@@ -1,4 +1,5 @@
 import { draw } from './presentation.js';
+import { translator } from './locale.js';
 import { groups } from './layout.js';
 export * as layout from './layout.js';
 let serial=0;
@@ -28,29 +29,31 @@ export function mount(container,options={}){
  if(!container?.ownerDocument)throw new TypeError('DOM container required');
  let model=structuredClone(validateModel(options.model)),computation=options.computation?structuredClone(options.computation):null;
  validateComputation(computation);
+ let locale=options.locale??'en',t=translator(locale);
  let selected=options.selected??null,mode=options.layout??'community',group='',step=1,predicate='',path=[],destroyed=false;
  if(selected&&!model.nodes.some(n=>n.id===selected))throw new TypeError('selected node must exist');
  if(!modes.includes(mode))throw new TypeError('unknown layout');
- const doc=container.ownerDocument,root=doc.createElement('section');root.className='mithril-graph-viewer';
+ const doc=container.ownerDocument,root=doc.createElement('section');root.className='mithril-graph-viewer';root.lang=locale;
  const el=(tag,text)=>{const n=doc.createElement(tag);if(text)n.textContent=text;return n;};
- const heading=el('header'),title=el('h2'),count=el('span'),nav=el('nav'),note=el('p'),legend=el('div'),stage=el('div'),back=el('button','← 全グループ');
- title.dataset.ui='layout-title';count.dataset.ui='layout-count';note.dataset.ui='layout-note';nav.setAttribute('aria-label','地図のデザイン');legend.className='legend';stage.className='stage';back.type='button';
+ const heading=el('header'),title=el('h2'),count=el('span'),nav=el('nav'),note=el('p'),legend=el('div'),stage=el('div'),back=el('button',t('back'));
+ title.dataset.ui='layout-title';count.dataset.ui='layout-count';note.dataset.ui='layout-note';nav.setAttribute('aria-label',t('navigation'));legend.className='legend';stage.className='stage';back.type='button';
  heading.append(title,count);root.append(heading,nav,legend,back,note,stage);
- const canvas=doc.createElementNS('http://www.w3.org/2000/svg','svg');canvas.setAttribute('role','group');canvas.setAttribute('aria-label','投影図');stage.append(canvas);
- const labels=['① 俯瞰','④ 歩く','③ 実行フロー','⑦ 履歴'];
- const buttons=modes.map((m,i)=>{const b=el('button',labels[i]);b.type='button';b.onclick=()=>setLayout(m);nav.append(b);return b;});
- groups.forEach(g=>{const label=el('span',g.label),dot=doc.createElementNS('http://www.w3.org/2000/svg','svg'),circle=doc.createElementNS(dot.namespaceURI,'circle');dot.setAttribute('viewBox','0 0 10 10');dot.setAttribute('aria-hidden','true');circle.setAttribute('cx','5');circle.setAttribute('cy','5');circle.setAttribute('r','3');circle.setAttribute('fill',g.color);dot.append(circle);label.prepend(dot);legend.append(label);});
+ const canvas=doc.createElementNS('http://www.w3.org/2000/svg','svg');canvas.setAttribute('role','group');canvas.setAttribute('aria-label',t('canvas'));stage.append(canvas);
+ const labelKeys=['tabOverview','tabOrbit','tabFlow','tabRiver'];
+ const buttons=modes.map((m,i)=>{const b=el('button',t(labelKeys[i]));b.type='button';b.onclick=()=>setLayout(m);nav.append(b);return b;});
+ groups.forEach(g=>{const label=el('span',t('group.'+g.id)),dot=doc.createElementNS('http://www.w3.org/2000/svg','svg'),circle=doc.createElementNS(dot.namespaceURI,'circle');dot.setAttribute('viewBox','0 0 10 10');dot.setAttribute('aria-hidden','true');circle.setAttribute('cx','5');circle.setAttribute('cy','5');circle.setAttribute('r','3');circle.setAttribute('fill',g.color);dot.append(circle);label.prepend(dot);legend.append(label);});
  back.onclick=()=>{group='';render();};container.append(root);
  const markerId='mithril-viewer-arrow-'+(++serial);
  function live(){if(destroyed)throw new Error('viewer destroyed');}
- function render(){live();buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(modes[i]===mode)));back.hidden=!group;legend.hidden=mode==='flow'||mode==='river';draw(canvas,{model,layout:mode,selected,scope:model.nodes,group,route:{path},highlight:new Set(),computation,step,predicate,ui:root,markerId,onSelect:select,onGroup:g=>{group=g;render();},onStep:s=>{setStep(s);options.onStep?.(s);}});}
+ function render(){live();root.lang=locale;back.textContent=t('back');nav.setAttribute('aria-label',t('navigation'));canvas.setAttribute('aria-label',t('canvas'));buttons.forEach((b,i)=>b.textContent=t(labelKeys[i]));legend.querySelectorAll('span').forEach((span,i)=>{span.lastChild.textContent=t('group.'+groups[i].id);});buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(modes[i]===mode)));back.hidden=!group;legend.hidden=mode==='flow'||mode==='river';draw(canvas,{model,layout:mode,selected,scope:model.nodes,group,route:{path},highlight:new Set(),computation,step,predicate,ui:root,markerId,t,locale,onSelect:select,onGroup:g=>{group=g;render();},onStep:s=>{setStep(s);options.onStep?.(s);}});}
  function select(id){live();if(!model.nodes.some(n=>n.id===id))throw new TypeError('unknown node');selected=id;mode='orbit';render();options.onSelect?.(id,structuredClone(model.nodes.find(n=>n.id===id)));}
  function setLayout(value){live();if(!modes.includes(value))throw new TypeError('unknown layout');mode=value;render();}
+ function setLocale(value){live();const next=translator(value);locale=value;t=next;render();}
  function setStep(value){live();if(!Number.isInteger(value)||value<1||value>(computation?.result.trace.length||0))throw new RangeError('step outside recorded trace');step=value;render();}
  function setComputation(value){live();validateComputation(value);computation=value?structuredClone(value):null;step=Math.max(1,computation?.result.trace.length||1);render();}
  function setModel(value){live();model=structuredClone(validateModel(value));if(!model.nodes.some(n=>n.id===selected))selected=null;path=[];group='';render();}
  function setRoute(value){live();if(!Array.isArray(value)||value.some(id=>!model.nodes.some(n=>n.id===id)))throw new TypeError('route IDs must exist');path=value.slice();render();}
  function setPredicate(value){live();if(typeof value!=='string')throw new TypeError('predicate must be a string');predicate=value;render();}
  step=Math.max(1,computation?.result.trace.length||1);render();
- return {select,setLayout,setStep,setComputation,setModel,setRoute,setPredicate,getState:()=>({layout:mode,selected,group,step}),destroy(){if(!destroyed){root.remove();destroyed=true;}}};
+ return {select,setLayout,setLocale,setStep,setComputation,setModel,setRoute,setPredicate,getState:()=>({layout:mode,selected,group,step,locale}),destroy(){if(!destroyed){root.remove();destroyed=true;}}};
 }

@@ -3,7 +3,7 @@
   "@id":"https://mithril.fund/lib/fund.mithril.lib.graph-viewer",
   "@type":"Library",
   "label":"Mithril Graph Viewer",
-  "version":"0.1.0",
+  "version":"0.1.1",
   "implementation":"src/index.js",
   "environment":"browser-es-module"
 }
